@@ -2,7 +2,8 @@
 
 **A pixel-art dogfighting arena in the browser: pick a call sign, shoot down other pilots,
 and your plane grows from Cadet to Air Marshal.** No account. Live at
-**https://bandits.vercel.app**.
+**https://bandits-game.vercel.app**. (`bandits.vercel.app` belongs to another Vercel account;
+the project's default domain is `bandits-zeta.vercel.app`.)
 
 Design direction: [DESIGN.md](DESIGN.md).
 

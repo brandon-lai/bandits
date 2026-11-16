@@ -41,7 +41,7 @@ export default {
     }
     if (url.pathname === "/best") return withCors(await arena.fetch("https://arena/best"), "public, max-age=20");
     if (url.pathname === "/health") return withCors(await arena.fetch("https://arena/health"));
-    if (url.pathname === "/") return withCors(new Response("Bandits arena server. Play at https://bandits.vercel.app\n"));
+    if (url.pathname === "/") return withCors(new Response("Bandits arena server. Play at https://bandits-game.vercel.app\n"));
     return withCors(new Response("not found", { status: 404 }));
   },
 } satisfies ExportedHandler<Env>;
