@@ -27,13 +27,13 @@ export interface Tier {
 
 export const TIERS: Tier[] = [
   { name: "Cadet", score: 0, scale: 0.55, hp: 100, dmg: 10, guns: 1, fire: 0.16, speed: 104, turn: 2.3 },
-  { name: "Wingman", score: 50, scale: 0.62, hp: 120, dmg: 11, guns: 1, fire: 0.14, speed: 106, turn: 2.15 },
-  { name: "Flight Lead", score: 130, scale: 0.7, hp: 150, dmg: 12, guns: 2, fire: 0.15, speed: 107, turn: 2.0 },
-  { name: "Ace", score: 260, scale: 0.78, hp: 185, dmg: 13, guns: 2, fire: 0.13, speed: 108, turn: 1.85 },
-  { name: "Double Ace", score: 460, scale: 0.86, hp: 225, dmg: 14, guns: 3, fire: 0.14, speed: 108, turn: 1.7 },
-  { name: "Squadron Leader", score: 750, scale: 0.95, hp: 270, dmg: 15, guns: 3, fire: 0.12, speed: 107, turn: 1.56 },
-  { name: "Wing Commander", score: 1150, scale: 1.05, hp: 320, dmg: 16, guns: 4, fire: 0.12, speed: 106, turn: 1.43 },
-  { name: "Air Marshal", score: 1700, scale: 1.15, hp: 380, dmg: 18, guns: 4, fire: 0.11, speed: 104, turn: 1.3 },
+  { name: "Wingman", score: 30, scale: 0.62, hp: 120, dmg: 11, guns: 1, fire: 0.14, speed: 106, turn: 2.15 },
+  { name: "Flight Lead", score: 90, scale: 0.7, hp: 150, dmg: 12, guns: 2, fire: 0.15, speed: 107, turn: 2.0 },
+  { name: "Ace", score: 180, scale: 0.78, hp: 185, dmg: 13, guns: 2, fire: 0.13, speed: 108, turn: 1.85 },
+  { name: "Double Ace", score: 360, scale: 0.86, hp: 225, dmg: 14, guns: 3, fire: 0.14, speed: 108, turn: 1.7 },
+  { name: "Squadron Leader", score: 620, scale: 0.95, hp: 270, dmg: 15, guns: 3, fire: 0.12, speed: 107, turn: 1.56 },
+  { name: "Wing Commander", score: 1000, scale: 1.05, hp: 320, dmg: 16, guns: 4, fire: 0.12, speed: 106, turn: 1.43 },
+  { name: "Air Marshal", score: 1600, scale: 1.15, hp: 380, dmg: 18, guns: 4, fire: 0.11, speed: 104, turn: 1.3 },
 ];
 
 export function tierFor(score: number): number {
@@ -56,13 +56,22 @@ export const REGEN_RATE = 0.06; // share of max health per second
 
 export const BULLET_SPEED = 430;
 export const BULLET_LIFE = 0.62; // seconds: about 330 px of reach
-export const SALVAGE_AMBIENT = 260; // salvage drifting in the world when nobody has died lately
-export const SALVAGE_MAX = 520;
+export const SALVAGE_AMBIENT = 400; // salvage drifting in the world when nobody has died lately
+export const SALVAGE_MAX = 700;
+
+// scoring: every hit counts, a kill counts more, and the victim's score is shared out
+export const HIT_POINTS = 2;
+export const KILL_POINTS = 30;
+export const KILL_SHARE = 0.3; // of the victim's score, to the killer
+/** what a piece of ambient salvage is worth: mostly 1, some 2, a few 5-point crates */
+export function ambientValue(r: number) {
+  return r < 0.6 ? 1 : r < 0.9 ? 2 : 5;
+}
 
 /** a plane's hit radius, px */
 export const hitRadius = (scale: number) => 13 * scale + 3;
 /** how close salvage must be to be picked up, px */
-export const pickRadius = (scale: number) => 16 * scale + 8;
+export const pickRadius = (scale: number) => 20 * scale + 10;
 
 export const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 export function wrapAngle(a: number) {

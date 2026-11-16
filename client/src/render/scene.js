@@ -239,9 +239,9 @@ export function createScene(initial = {}) {
   const tracerHead = pack(255, 252, 214)
   const tracerMid = pack(255, 214, 96)
   const tracerTail = pack(250, 140, 40)
-  const salvageA = pack(255, 214, 92)
-  const salvageB = pack(196, 140, 40)
-  const salvageHi = pack(255, 250, 220)
+  const salvageA = pack(255, 200, 52)
+  const salvageB = pack(196, 124, 24)
+  const salvageHi = pack(255, 236, 150)
 
   const paints = new Map()
   /** the jet palette for one accent colour: [base, lit, dim] */
@@ -973,7 +973,48 @@ export function createScene(initial = {}) {
     }
   }
 
-  // salvage: little glinting pieces bobbing a few pixels under the jets
+  // salvage: gold pieces bobbing under the jets, sized by what they are worth.
+  // Sprites: O outline · H highlight · A gold · B shade · W the moving glint
+  const SALVAGE_SPRITES = {
+    1: [
+      '....O....',
+      '...OHO...',
+      '..OHHAO..',
+      '.OHAAAAO.',
+      'OHAAWAABO',
+      '.OAAAABO.',
+      '..OABBO..',
+      '...OBO...',
+      '....O....',
+    ],
+    2: [
+      '.....O.....',
+      '....OHO....',
+      '...OHHAO...',
+      '..OHHAAAO..',
+      '.OHAAAAAAO.',
+      'OHAAAWAAABO',
+      '.OAAAAAABO.',
+      '..OAAAABO..',
+      '...OABBO...',
+      '....OBO....',
+      '.....O.....',
+    ],
+    5: [
+      'OOOOOOOOOOO',
+      'OHHHHHHHHAO',
+      'OHAAAAAAABO',
+      'OHABBABBABO',
+      'OHAAAWAAABO',
+      'OHAAAAAAABO',
+      'OHABBABBABO',
+      'OHAAAAAAABO',
+      'OHAAAAAAABO',
+      'OABBBBBBBBO',
+      'OOOOOOOOOOO',
+    ],
+  }
+  const salvageGlint = pack(255, 255, 244)
   function drawSalvage() {
     const _fb = fb
     for (const s of salvage) {
@@ -983,31 +1024,33 @@ export function createScene(initial = {}) {
       const wx = s.ox + wrapD(s.x - s.ox) * e
       const wy = s.oy + wrapD(s.y - s.oy) * e
       const hop = Math.sin(u * Math.PI) * 10
-      const z = cam.alt - 12 + Math.sin(time * 2.2 + s.id * 1.7) * 1.5 + hop
+      const z = cam.alt - 12 + Math.sin(time * 2.2 + s.id * 1.7) * 2 + hop
       const X = Math.round(sx(wx))
       const Y = Math.round(sy(wy, z))
-      if (X < 4 || Y < 4 || X >= W - 4 || Y >= H - 4) continue
-      const big = s.v >= 4
-      const glint = ((time * 3 + s.id * 0.37) % 2.2) < 0.18
-      const o = Y * W + X
-      if (big) {
-        // a small crate: 4×4 with a lit corner and a dark rim
-        for (let dy = -2; dy <= 1; dy++) for (let dx = -2; dx <= 1; dx++) _fb[o + dy * W + dx] = salvageA
-        for (let k = -2; k <= 1; k++) { _fb[o + W + k] = salvageB; _fb[o + k * W + 1] = salvageB }
-        _fb[o - 2 * W - 2] = glint ? salvageHi : salvageA
-        for (let k = -2; k <= 1; k++) {
-          _fb[o - 3 * W + k] = outlineCol
-          _fb[o + 2 * W + k] = outlineCol
-          _fb[o + k * W - 3] = outlineCol
-          _fb[o + k * W + 2] = outlineCol
+      const spr = SALVAGE_SPRITES[s.v >= 4 ? 5 : s.v >= 2 ? 2 : 1]
+      const half = spr.length >> 1
+      if (X < half + 3 || Y < half + 3 || X >= W - half - 3 || Y >= H - half - 3) continue
+      // the glint sweeps across now and then; the highlight brightens with it
+      const phase = (time * 1.6 + s.id * 0.37) % 2.4
+      const lit = phase < 0.22
+      for (let r = 0; r < spr.length; r++) {
+        const row = spr[r]
+        const o = (Y - half + r) * W + X - half
+        for (let c = 0; c < row.length; c++) {
+          const ch = row.charCodeAt(c)
+          if (ch === 46) continue // '.'
+          _fb[o + c] = ch === 79 ? outlineCol : ch === 72 ? (lit ? salvageHi : salvageA) : ch === 66 ? salvageB : ch === 87 ? (lit ? salvageGlint : salvageHi) : salvageA
         }
-      } else {
-        // a diamond, 5 px across, outlined so it reads on sand and surf
-        const pts = [[0, -2, 1], [-1, -1, 1], [0, -1, 2], [1, -1, 1], [-2, 0, 1], [-1, 0, 2], [0, 0, 3], [1, 0, 1], [2, 0, 4], [-1, 1, 1], [0, 1, 4], [1, 1, 4], [0, 2, 4]]
-        for (const [dx, dy] of [[0, -3], [-1, -2], [1, -2], [-2, -1], [2, -1], [-3, 0], [3, 0], [-2, 1], [2, 1], [-1, 2], [1, 2], [0, 3]]) {
-          if (X + dx >= 0 && X + dx < W && Y + dy >= 0 && Y + dy < H) _fb[o + dy * W + dx] = outlineCol
-        }
-        for (const [dx, dy, c] of pts) _fb[o + dy * W + dx] = c === 2 ? (glint ? salvageHi : salvageA) : c === 3 ? salvageHi : c === 4 ? salvageB : salvageA
+      }
+      // a four-point twinkle above the bigger pieces as the glint passes
+      if (lit && s.v >= 2) {
+        const tx = X + half - 1
+        const ty = Y - half - 1
+        _fb[ty * W + tx] = salvageGlint
+        _fb[(ty - 1) * W + tx] = salvageHi
+        _fb[(ty + 1) * W + tx] = salvageHi
+        _fb[ty * W + tx - 1] = salvageHi
+        _fb[ty * W + tx + 1] = salvageHi
       }
     }
   }

@@ -2,7 +2,7 @@
 // Pure logic, no sockets: the Durable Object owns one of these, and the tests drive one directly.
 
 import {
-  BULLET_LIFE, BULLET_SPEED, CRUISE_Z, type Controls, type Flight, REGEN_DELAY, REGEN_RATE, SALVAGE_AMBIENT,
+  BULLET_LIFE, BULLET_SPEED, CRUISE_Z, HIT_POINTS, KILL_POINTS, KILL_SHARE, ambientValue, type Controls, type Flight, REGEN_DELAY, REGEN_RATE, SALVAGE_AMBIENT,
   SALVAGE_MAX, SPAWN_SAFE, TICK_HZ, TIERS, WORLD, clamp, fly, gunAngles, gunOffsets, hitRadius, newFlight,
   pickRadius, rolling, tierFor, wrapAngle, wrapDelta, wrapPos,
 } from "./game";
@@ -204,7 +204,7 @@ export class Arena {
   }
 
   private addAmbient(record = true) {
-    const s: Salvage = { id: this.nextSalvage++, x: this.rnd() * WORLD, y: this.rnd() * WORLD, v: 1, ox: 0, oy: 0, expires: Infinity };
+    const s: Salvage = { id: this.nextSalvage++, x: this.rnd() * WORLD, y: this.rnd() * WORLD, v: ambientValue(this.rnd()), ox: 0, oy: 0, expires: Infinity };
     s.ox = s.x;
     s.oy = s.y;
     this.salvage.set(s.id, s);
@@ -268,7 +268,7 @@ export class Arena {
     // a bullet can land after its pilot went down: the kill is named, but a dead pilot scores nothing
     if (k && k.flight) {
       k.kills++;
-      this.gain(k, 20 + Math.floor(v.score * 0.2));
+      this.gain(k, KILL_POINTS + Math.floor(v.score * KILL_SHARE));
     }
     v.flight = null;
     if (v.brain) v.brain.respawn = 3 + this.rnd() * 2;
@@ -370,6 +370,9 @@ export class Arena {
         hit.sinceHit = 0;
         hit.lastHitBy = b.owner;
         out.events.push(["h", b.id, hit.id, r1(f.x), r1(f.y)]);
+        // every hit is worth a little, so a fight pays even when someone else finishes it
+        const shooter = this.pilots.get(b.owner);
+        if (shooter?.flight) this.gain(shooter, HIT_POINTS);
         if (hit.hp <= 0) this.down(hit, this.pilots.get(b.owner) ?? null);
         continue;
       }

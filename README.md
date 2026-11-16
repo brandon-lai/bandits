@@ -50,8 +50,11 @@ code and nudged toward the server's version, so steering has no lag. Everyone el
 
 ## The mechanics (decided here)
 
-- **Score** comes from salvage (1 point a piece, scattered around the map) and kills
-  (20 + 20% of the victim's score). A downed plane also drops salvage worth half its score.
+- **Score** comes from every hit (2 points), kills (30 + 30% of the victim's score) and
+  gold salvage scattered around the map (400 pieces worth 1, 2 or 5). A downed plane also
+  drops salvage worth half its score. Every gain floats up off your plane as "+N".
+- **Pace** (simulated: a player who flies like the bots, eight 10-minute runs): Wingman
+  at a median 27 s, Ace at about 1.5 min, Air Marshal in about 5 min for half the runs.
 - **Eight tiers:** Cadet, Wingman, Flight Lead, Ace, Double Ace, Squadron Leader, Wing
   Commander, Air Marshal. Each step means a bigger plane, more hull (100 → 380), harder hits
   (10 → 18), more guns (1 → 4, spreading wider) and a faster fire rate. **It also means a

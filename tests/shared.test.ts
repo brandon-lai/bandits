@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Arena, botsFor } from "../shared/arena";
-import { BULLET_LIFE, TICK_HZ, TIERS, WORLD, fly, newFlight, tierFor, wrapDelta } from "../shared/game";
+import { BULLET_LIFE, HIT_POINTS, TICK_HZ, TIERS, WORLD, fly, newFlight, tierFor, wrapDelta } from "../shared/game";
 import { cleanCountry, cleanName } from "../shared/names";
 
 /** put two pilots nose to tail: `a` behind `b`, both heading north, `gap` px apart */
@@ -16,6 +16,7 @@ function duel(gap = 120) {
   a.flight!.x = b.flight!.x = 1000;
   a.flight!.y = 1000;
   b.flight!.y = 1000 - gap;
+  arena.salvage.clear(); // only the fight scores in these tests
   return { arena, a, b };
 }
 
@@ -97,6 +98,19 @@ describe("the arena", () => {
     expect(kill).toEqual(["k", a.id, b.id, expect.any(Number), expect.any(Number), 0]);
     expect(a.kills).toBe(1);
     expect(a.score).toBeGreaterThanOrEqual(20);
+  });
+
+  it("every hit scores for the shooter, before any kill", () => {
+    const { arena, a, b } = duel();
+    a.controls.fire = true;
+    let hits = 0;
+    for (let i = 0; i < TICK_HZ * 0.6 && hits === 0; i++) {
+      for (const e of arena.step().events) if (e[0] === "h") hits++;
+      b.flight!.x = a.flight!.x;
+    }
+    expect(hits).toBe(1);
+    expect(b.flight).not.toBeNull();
+    expect(a.score).toBe(HIT_POINTS);
   });
 
   it("a shot-down plane drops salvage worth half its score", () => {

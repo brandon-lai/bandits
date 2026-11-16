@@ -215,8 +215,16 @@ export class Game {
 
     // my plane's state
     const prevAlive = this.me?.alive ?? false;
+    const prevScore = this.me?.alive ? this.me.sc : -1;
     this.me = m.me;
     if (m.me) {
+      // every point earned floats up off the plane, merged when they come close together
+      if (m.me.alive && prevScore >= 0 && m.me.sc > prevScore) {
+        const gain = m.me.sc - prevScore;
+        const last = this.popups[this.popups.length - 1];
+        if (last && now - last.t < 350) { last.n += gain; last.t = now; }
+        else this.popups.push({ n: gain, t: now, dx: (Math.random() - 0.5) * 16 });
+      }
       if (m.me.tier !== this.myTier) this.myTier = m.me.tier;
       if (!m.me.alive) this.mine = null;
       if (m.me.alive && !prevAlive) this.ui.respawned();
@@ -336,6 +344,7 @@ export class Game {
     void boost;
   }
   mineFresh = false;
+  popups: { n: number; t: number; dx: number }[] = [];
 
   // ── input
   private bindInput() {
@@ -635,6 +644,7 @@ export class Game {
     if (this.layer) this.layer.draw(flames.count, flames.data, this.fire.width / this.scene.width, now / 1000);
 
     this.drawLabels(tags, f);
+    this.drawPopups(f, now);
   }
 
   /** a remote plane on the drawn timeline: between the two snapshots around it, or a little past the last */
@@ -673,6 +683,31 @@ export class Game {
   }
 
   // ── names over the planes, and arrows to the ones just out of sight
+  /** "+N" over my plane as points come in, rising and fading over a second */
+  private drawPopups(f: Flight | null, now: number) {
+    this.popups = this.popups.filter((p) => now - p.t < 1000);
+    if (!f || this.popups.length === 0) return;
+    const c = this.lctx;
+    const k = this.px * this.dpr;
+    const d = this.dpr;
+    const [fx, fy] = this.scene.toFrame(f.x, f.y, CRUISE_Z);
+    c.textAlign = "center";
+    c.font = `700 ${20 * d}px "B612 Mono", ui-monospace, monospace`;
+    c.lineWidth = 3 * d;
+    c.lineJoin = "round";
+    for (const p of this.popups) {
+      const u = (now - p.t) / 1000;
+      const X = fx * k + p.dx * d;
+      const Y = fy * k - (30 + 34 * (1 - (1 - u) * (1 - u))) * d * Math.max(1, TIERS[this.myTier].scale * 1.4);
+      c.globalAlpha = u < 0.7 ? 1 : (1 - u) / 0.3;
+      c.strokeStyle = "rgba(6, 14, 30, 0.85)";
+      c.strokeText(`+${p.n}`, X, Y);
+      c.fillStyle = "#ffd65c";
+      c.fillText(`+${p.n}`, X, Y);
+    }
+    c.globalAlpha = 1;
+  }
+
   private drawLabels(tags: { x: number; y: number; scale: number; hp: number; tier: number; p: PilotInfo | undefined }[], f: Flight | null) {
     const c = this.lctx;
     const k = this.px * this.dpr;
@@ -684,7 +719,7 @@ export class Game {
     const d = this.dpr;
     c.textAlign = "center";
     c.textBaseline = "alphabetic";
-    c.font = `600 ${11 * d}px "IBM Plex Mono", ui-monospace, monospace`;
+    c.font = `700 ${11 * d}px "B612 Mono", ui-monospace, monospace, "Twemoji Country Flags"`;
     for (const t of tags) {
       const [fx, fy] = this.scene.toFrame(t.x, t.y, CRUISE_Z);
       const X = fx * k;
