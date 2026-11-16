@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bandits",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "durable_objects": {
+    "bindings": [{ "name": "ARENA", "class_name": "ArenaDO" }]
+  },
+  // SQLite-backed Durable Object storage (free plan). It only holds today's best scores.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ArenaDO"] }],
+  "vars": { "MAX_HUMANS": "40", "PER_IP": "4" },
+  "observability": { "enabled": true }
+}

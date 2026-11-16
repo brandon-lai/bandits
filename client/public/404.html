@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="dark" />
+<title>Bandits: off the map</title>
+<meta name="description" content="This page is not part of the Bandits arena." />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<style>
+  /* Hallmark · pre-emit critique: P3 H5 E5 S4 R5 V3 · weakest: P, a not-found page has little to argue; it stays in the arena's voice and points straight back */
+  :root {
+    color-scheme: dark;
+    --sea: oklch(51% 0.13 255);
+    --panel: oklch(21% 0.045 262 / 0.9);
+    --ink: oklch(96% 0.012 255);
+    --ink-2: oklch(84% 0.025 255);
+    --primary: oklch(67% 0.2 42);
+    --primary-ink: oklch(17% 0.04 262);
+    --focus: oklch(82% 0.17 55);
+    --face: "B612", system-ui, sans-serif;
+    --edge: oklch(95% 0.012 255 / 0.13);
+    --primary-press: oklch(61% 0.19 40);
+  }
+  html, body { margin: 0; height: 100%; overflow-x: clip; }
+  body {
+    display: grid; place-items: center; padding: 16px; box-sizing: border-box;
+    background: var(--sea); color: var(--ink); font: 400 16px/1.5 var(--face);
+  }
+  main { max-width: 380px; padding: 24px; background: var(--panel); border-radius: 3px; border: 1px solid var(--edge); }
+  h1 { margin: 0 0 8px; font: 700 28px/1.1 var(--face); text-wrap: balance; }
+  p { margin: 0 0 20px; color: var(--ink-2); }
+  a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 3px; background: var(--primary); color: var(--primary-ink); font-weight: 700; text-decoration: none; }
+  a:active { background: var(--primary-press); transform: translateY(1px); }
+  a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Off the map</h1>
+  <p>There is nothing out here but open sea. The fight is back at the arena.</p>
+  <a href="/">Back to the arena</a>
+</main>
+</body>
+</html>

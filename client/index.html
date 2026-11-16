@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b1a33" />
+    <title>Bandits: pixel dogfights, live</title>
+    <meta name="description" content="A pixel-art dogfighting arena in your browser. Pick a call sign, shoot down other pilots, and grow from Cadet to Air Marshal. No account needed." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Bandits" />
+    <meta property="og:title" content="Bandits: pixel dogfights, live" />
+    <meta property="og:description" content="Shoot down other pilots, grow your plane, top the board. No account needed." />
+    <meta property="og:image" content="https://bandits.vercel.app/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Pixel-art fighter jets in a dogfight over stacked islands, with the Bandits title stencilled on the left." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Bandits: pixel dogfights, live" />
+    <meta name="twitter:description" content="Shoot down other pilots, grow your plane, top the board. No account needed." />
+    <meta name="twitter:image" content="https://bandits.vercel.app/og.png" />
+    <meta name="twitter:image:alt" content="Pixel-art fighter jets in a dogfight over stacked islands, with the Bandits title stencilled on the left." />
+    <link rel="stylesheet" href="./src/styles.css" />
+    <script>document.documentElement.classList.add("js")</script>
+  </head>
+  <body>
+    <main id="stage" aria-label="Bandits arena">
+      <canvas id="world" role="img" aria-label="Pixel-art fighter jets flying over islands, seen from above"></canvas>
+      <canvas id="fire" aria-hidden="true"></canvas>
+      <canvas id="labels" aria-hidden="true"></canvas>
+
+      <!-- join -->
+      <section id="join" class="sheet" data-ui aria-labelledby="join-title">
+        <h1 id="join-title" class="wordmark">Bandits</h1>
+        <p class="lede">Shoot down pilots. Grow your plane. Top the board.</p>
+        <form id="join-form" autocomplete="off">
+          <label class="field">
+            <span class="label">Call sign</span>
+            <input id="name" name="name" maxlength="16" placeholder="Pilot" spellcheck="false" autocapitalize="words" enterkeyhint="go" />
+          </label>
+          <fieldset class="paints">
+            <legend class="label">Paint</legend>
+            <div id="paints" class="paint-row"></div>
+          </fieldset>
+          <label class="check" id="flag-row">
+            <input type="checkbox" id="flag" checked />
+            <span><span id="flag-text">Show my flag</span><small id="flag-note">Your country, from your connection. Shown beside your name.</small></span>
+          </label>
+          <button type="submit" id="fly" class="btn primary" disabled>
+            <span class="btn-label">Connecting</span>
+          </button>
+          <p id="join-status" class="status" role="status" aria-live="polite"></p>
+        </form>
+        <dl class="controls">
+          <div><dt>Steer</dt><dd>Point</dd></div>
+          <div><dt>Fire</dt><dd>Hold click</dd></div>
+          <div><dt>Afterburner</dt><dd>Right-click or Shift</dd></div>
+          <div><dt>Barrel roll</dt><dd>Space</dd></div>
+        </dl>
+        <section class="best" aria-labelledby="best-title">
+          <h2 id="best-title" class="label">Today’s best</h2>
+          <ol id="best"></ol>
+        </section>
+        <footer class="sheet-foot">
+          <span id="online"></span>
+          <button type="button" class="link" id="about-open">About</button>
+        </footer>
+      </section>
+
+      <!-- in flight -->
+      <section id="hud" data-ui hidden aria-label="Your plane">
+        <div class="tier-row">
+          <span id="tier" class="tier">Cadet</span>
+          <span id="score" class="score">0</span>
+        </div>
+        <div class="meter next"><span class="label" id="next-label">Next: Wingman</span><i><b id="next-bar"></b></i></div>
+        <div class="meter hp"><span class="label">Hull</span><i><b id="hp-bar"></b></i><span id="hp-num" class="num">100</span></div>
+        <div class="meter en"><span class="label">Burner</span><i><b id="en-bar"></b></i><span id="roll" class="roll">Roll</span></div>
+        <div id="tally" class="tally" aria-label="Kills this flight: 0"></div>
+      </section>
+
+      <section id="board" data-ui hidden aria-labelledby="board-title">
+        <h2 id="board-title" class="label">Leaderboard</h2>
+        <ol id="board-list"></ol>
+      </section>
+
+      <ol id="feed" aria-live="polite" aria-label="Kills"></ol>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <p id="hint" class="hint" hidden>
+        <span><kbd>Mouse</kbd>Point to steer</span>
+        <span><kbd>Click</kbd>Hold to fire</span>
+        <span><kbd>Shift</kbd>Afterburner</span>
+        <span><kbd>Space</kbd>Barrel roll</span>
+      </p>
+      <div id="hurt" aria-hidden="true"></div>
+
+      <div id="touch" data-ui hidden>
+        <button type="button" class="pad roll-pad" id="t-roll" aria-label="Barrel roll">Roll</button>
+        <button type="button" class="pad boost-pad" id="t-boost" aria-label="Afterburner: hold">Burn</button>
+        <button type="button" class="pad fire-pad" id="t-fire" aria-label="Fire: hold">Fire</button>
+      </div>
+
+      <!-- shot down -->
+      <section id="dead" class="sheet small" data-ui hidden aria-labelledby="dead-title">
+        <h2 id="dead-title" class="wordmark small">Shot down</h2>
+        <p id="dead-by" class="lede"></p>
+        <div id="dead-tally" class="tally big" aria-hidden="true"></div>
+        <dl class="stats">
+          <div><dt>Score</dt><dd id="d-score">0</dd></div>
+          <div><dt>Kills</dt><dd id="d-kills">0</dd></div>
+          <div><dt>Aloft</dt><dd id="d-time">0:00</dd></div>
+          <div><dt>Rank</dt><dd id="d-tier">Cadet</dd></div>
+        </dl>
+        <button type="button" id="again" class="btn primary"><span class="btn-label">Fly again</span><kbd>Enter</kbd></button>
+        <button type="button" id="change" class="link">Change name or paint</button>
+      </section>
+
+      <div id="conn" class="banner" data-ui role="alert" hidden></div>
+    </main>
+
+    <dialog id="about" aria-labelledby="about-title">
+      <form method="dialog">
+        <h2 id="about-title" class="wordmark small">About</h2>
+        <p>Bandits is a free-for-all dogfight. Every pilot starts as a <b>Cadet</b>. Shoot planes down and fly through the salvage they leave, and your plane grows: more hull, more guns, harder hits. It also turns slower, so a small plane can always out-turn a big one.</p>
+        <p>When the sky is quiet, a few bots (marked <span class="bot-tag">bot</span>) keep it busy. They make way as people arrive.</p>
+        <h3 class="label">What we keep</h3>
+        <p>No accounts. Your call sign and, if you leave it on, your country flag are shown to the other pilots. Scores over 30 go on today’s board with that name and flag, and are deleted after three days. Your IP address is never stored.</p>
+        <h3 class="label">Credits</h3>
+        <p>The sprite-stacked jet, the islands and the flames are adapted from the <a href="https://forge.ui8.ai/share/frag_1eb8944c-57b1-42ca-a909-5c2d7e517c24" target="_blank" rel="noopener">“fighter” fragment on Forge</a>. Flags are Twemoji (CC-BY 4.0).</p>
+        <button class="btn" value="close">Close</button>
+      </form>
+    </dialog>
+
+    <noscript><p class="noscript">Bandits is a live game drawn by JavaScript. Turn it on to fly.</p></noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
