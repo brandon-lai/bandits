@@ -14,7 +14,10 @@ import { type Ui, flagEmoji } from "./ui";
 
 const TICK_MS = 1000 / TICK_HZ;
 const INTERP = 4.5; // ticks the others are drawn behind the server (150 ms)
-const SEND_MS = 66; // inputs go out ~15 times a second, and at once when a button changes
+// Each message counts toward Cloudflare's request allowance, so the aim goes out at most
+// 10 times a second and only when it has moved; a button change goes at once.
+const SEND_MS = 100;
+const AIM_STEP = 0.02; // radians the aim must move before it is worth sending
 
 interface Remote {
   rows: { tk: number; r: PlaneRow }[];
@@ -45,6 +48,7 @@ export class Game {
   rtt = 120;
   lastSend = 0;
   lastBits = 0;
+  lastAim = 0;
   joined = false;
   camX = 1024;
   camY = 1024;
@@ -98,7 +102,7 @@ export class Game {
     this.layout();
     new ResizeObserver(() => this.layout()).observe(wrap);
     this.bindInput();
-    setInterval(() => this.net.send({ t: "ping", c: performance.now() }), 2000);
+    setInterval(() => this.net.send({ t: "ping", c: performance.now() }), 5000);
     requestAnimationFrame((t) => this.frame(t));
   }
 
@@ -441,10 +445,13 @@ export class Game {
     this.readControls();
     const bits = (this.controls.fire ? 1 : 0) | (this.controls.boost ? 2 : 0) | (this.rollPending ? 4 : 0);
     const t = performance.now();
-    if (!now && t - this.lastSend < SEND_MS && bits === this.lastBits) return;
-    if (now && bits === this.lastBits && t - this.lastSend < 20) return;
+    const buttons = bits !== this.lastBits;
+    const aimMoved = Math.abs(wrapAngle(this.controls.aim - this.lastAim)) > AIM_STEP;
+    if (!buttons && (!aimMoved || t - this.lastSend < SEND_MS)) return;
+    if (now && !buttons && t - this.lastSend < 20) return;
     this.lastSend = t;
     this.lastBits = bits & 3;
+    this.lastAim = this.controls.aim;
     this.net.send({ t: "in", a: Math.round(this.controls.aim * 1000) / 1000, b: bits });
     if (this.rollPending) {
       this.controls.roll = true;

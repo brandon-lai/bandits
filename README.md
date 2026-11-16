@@ -107,19 +107,18 @@ The page connects to `ws://localhost:8787` in dev, and to
 
 ## Owner checklist
 
-1. **Cloudflare token for Worker deploys from GitHub:** create an API token with
-   *Edit Cloudflare Workers*, then
-   `gh secret set CLOUDFLARE_API_TOKEN -R <owner>/bandits` and
-   `gh secret set CLOUDFLARE_ACCOUNT_ID -R <owner>/bandits`. Until then the workflow
+1. **Cloudflare token for Worker deploys from GitHub:** `CLOUDFLARE_ACCOUNT_ID` is set.
+   Create an API token with the *Edit Cloudflare Workers* template, then
+   `gh secret set CLOUDFLARE_API_TOKEN -R brandon-lai/bandits`. Until then the workflow
    skips (green), and Worker changes need `cd worker && npx wrangler deploy`.
 2. **Playtest with real people.** Bots and probes have flown it; humans on two machines
    have not. Watch for rubber-banding on high-latency connections.
 3. **Cloudflare plan limits:** the arena Durable Object runs while anyone is connected and
    sleeps when the last person leaves. On the free plan, a full day of continuous play should fit
-   inside the daily duration allowance, but each player's inputs count as requests (about
-   0.75 a second per player). Many players for many hours will need Workers Paid ($5/mo).
-4. **Credit and permission:** the renderer is adapted from the “fighter” Forge fragment,
-   which its owner shares with remixing allowed but with no stated licence. It is credited
-   in the About dialog and here. Before promoting Bandits widely, ask the fragment's author.
+   inside the daily duration allowance, but each player's inputs count as requests. The page
+   sends its aim at most 10 times a second and only when it moves (about 0.4 requests a
+   second for a player steering hard, near zero flying straight). Many players for many hours will need Workers Paid ($5/mo).
+4. **Credit and permission:** the renderer is adapted from the “fighter” Forge fragment
+   with its author's permission (confirmed 2026-11-16). It is credited in the About dialog.
 5. **The `flockfield-server` workers.dev subdomain** is shared with Flock and Labyrinth. A
    custom domain would make the arena URL your own.
