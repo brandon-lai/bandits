@@ -183,6 +183,19 @@ describe("the arena", () => {
     expect(kills).toBeGreaterThan(0);
   });
 
+  it("no more than two bots chase one person", () => {
+    const arena = new Arena(6);
+    const me = arena.join("solo", "", 0);
+    arena.balanceBots();
+    let worst = 0;
+    for (let i = 0; i < TICK_HZ * 40; i++) {
+      arena.step();
+      const on = [...arena.pilots.values()].filter((p) => p.brain && p.flight && p.brain.target === me.id).length;
+      worst = Math.max(worst, on);
+    }
+    expect(worst).toBeLessThanOrEqual(2);
+  });
+
   it("the leaderboard lists flying pilots by score", () => {
     const arena = new Arena(5);
     const a = arena.join("a", "", 0);

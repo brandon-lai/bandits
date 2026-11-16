@@ -423,10 +423,16 @@ export class Arena {
     brain.think = 0.18 + this.rnd() * 0.12;
     brain.aimErr = (this.rnd() - 0.5) * 0.22;
 
+    // no more than two bots on any one plane, so a lone newcomer is not swarmed
+    const chasers = new Map<number, number>();
+    for (const o of this.pilots.values()) {
+      if (o.brain && o !== p && o.flight && o.brain.target >= 0) chasers.set(o.brain.target, (chasers.get(o.brain.target) ?? 0) + 1);
+    }
+    const crowded = (o: Pilot) => (chasers.get(o.id) ?? 0) >= 2 && brain.target !== o.id;
     let foe: Pilot | null = null;
     let foeD = 400;
     for (const o of this.pilots.values()) {
-      if (o === p || !o.flight || o.protect > 0) continue;
+      if (o === p || !o.flight || o.protect > 0 || crowded(o)) continue;
       const d = Math.hypot(wrapDelta(o.flight.x - f.x), wrapDelta(o.flight.y - f.y));
       // a little keener on wounded and smaller planes
       const keen = d * (0.75 + 0.25 * (o.hp / TIERS[o.tier].hp)) * (o.tier > p.tier + 2 ? 1.4 : 1);
@@ -435,6 +441,7 @@ export class Arena {
     const c = p.controls;
     c.fire = false;
     c.boost = false;
+    brain.target = foe ? foe.id : -1;
     brain.fleeing = !!foe && p.hp < tier.hp * 0.3 && foe.tier >= p.tier;
     if (foe && foe.flight) {
       const of = foe.flight;
@@ -477,11 +484,12 @@ export class Arena {
       let prey: Pilot | null = null;
       let preyD = 1100;
       for (const o of this.pilots.values()) {
-        if (o === p || !o.flight || o.protect > 0) continue;
-        const d = Math.hypot(wrapDelta(o.flight.x - f.x), wrapDelta(o.flight.y - f.y)) * (o.bot ? 1 : 0.7);
+        if (o === p || !o.flight || o.protect > 0 || crowded(o)) continue;
+        const d = Math.hypot(wrapDelta(o.flight.x - f.x), wrapDelta(o.flight.y - f.y)) * (o.bot ? 1 : 0.85);
         if (d < preyD) { preyD = d; prey = o; }
       }
       if (prey && prey.flight) {
+        brain.target = prey.id;
         c.aim = Math.atan2(wrapDelta(prey.flight.x - f.x), -wrapDelta(prey.flight.y - f.y)) + brain.aimErr;
         c.boost = preyD > 500 && f.energy > 70;
         return;
