@@ -53,17 +53,23 @@ code and nudged toward the server's version, so steering has no lag. Everyone el
 - **Score** comes from every hit (2 points), kills (30 + 30% of the victim's score) and
   gold salvage scattered around the map (400 pieces worth 1, 2 or 5). A downed plane also
   drops salvage worth half its score. Every gain floats up off your plane as "+N".
-- **Pace** (simulated: a player who flies like the bots, eight 10-minute runs): Wingman
-  at a median 27 s, Ace at about 1.5 min, Air Marshal in about 5 min for half the runs.
-- **Eight tiers:** Cadet, Wingman, Flight Lead, Ace, Double Ace, Squadron Leader, Wing
-  Commander, Air Marshal. Each step means a bigger plane, more hull (100 → 380), harder hits
-  (10 → 18), more guns (1 → 4, spreading wider) and a faster fire rate. **It also means a
-  slower turn (2.3 → 1.3 rad/s)**, so a Cadet can always out-turn an Air Marshal. That is
-  the agar.io balance: big is strong and slow, small is weak and nimble.
+- **50 levels, continuous growth (agar.io style):** score maps to a fractional level, and
+  hull (100 → 394), damage per hit (10 → 18.8), size, fire rate and turn rate (2.3 → 1.27
+  rad/s) all follow it point by point, so every pickup makes the plane a little stronger
+  even between levels. New hull plating arrives undamaged. Bigger planes turn slower, so a
+  small plane can always out-turn a big one. Level L needs `2·(L−1)^1.952` points: level 2
+  at 2, level 5 at 30, level 20 at about 630, level 50 at about 4,000.
+- **Ranks** are titles at set levels: Cadet 1, Wingman 5, Flight Lead 10, Ace 15, Double
+  Ace 20, Squadron Leader 28, Wing Commander 36, Air Marshal 45. **Guns** come in steps:
+  two at level 8, three at 18, four at 30. A new rank or new guns gets a toast; every
+  level flashes the HUD badge and floats "Level N" off the plane. Name tags show levels.
+- **Pace** (simulated: a player who flies like the bots, eight 10-minute runs): level 5 at
+  a median 24 s, level 10 at about 1 min 10, level 20 at about 2.5 min in 3 of 8 runs, and
+  about 6 level-ups a minute while alive. The top levels are for long lives in busy skies.
 - **Afterburner:** 1.75× speed, drains energy and refills after a pause.
 - **Barrel roll:** bullets pass through you for most of a 0.7 s roll, with a 3.2 s cooldown.
 - **Spawn protection:** 3 s, ends early if you fire. Hull repairs itself after 5 s untouched.
-- **Death:** you respawn as a Cadet with 0 points, as in agar.io.
+- **Death:** you respawn as a level 1 Cadet with 0 points, as in agar.io.
 - **Bots:** with 1 person on there are 6 bots, tapering to none at 9 people. They look like
   any other pilot (the page is never told which planes are bots), score at half rate so people stay on top, hunt across the map,
   lead their shots, flee when hurt and break out of turning circles.

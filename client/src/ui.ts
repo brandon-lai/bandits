@@ -1,7 +1,7 @@
 // Everything around the picture: the join card, the kneeboard HUD, the leaderboard, the kill
 // feed, toasts, the shot-down card and the connection banner.
 
-import { PAINTS, PAINT_NAMES, TIERS } from "../../shared/game";
+import { GUN_LEVELS, MAX_LEVEL, PAINTS, PAINT_NAMES, RANKS, gunsAt, levelScore, rankAt, statsAt } from "../../shared/game";
 import type { BestRow, Me, PilotInfo, ServerMsg } from "../../shared/protocol";
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -31,14 +31,11 @@ function el(tag: string, cls?: string, text?: string) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-function tierPerks(t: number) {
-  const a = TIERS[t];
-  const b = TIERS[t - 1];
-  const bits: string[] = [];
-  if (b && a.guns > b.guns) bits.push(a.guns === 2 ? "twin guns" : `${a.guns} guns`);
-  if (b) bits.push(`hull ${a.hp}`);
-  if (b && a.dmg > b.dmg) bits.push(`hits for ${a.dmg}`);
-  return bits.join(", ");
+const gunName = (n: number) => (n === 2 ? "Twin guns" : n === 3 ? "Three guns" : n === 4 ? "Four guns" : "One gun");
+/** what a level brings, for the level-up toast */
+function levelPerks(level: number) {
+  const a = statsAt(level);
+  return `Level ${level}, hull ${Math.round(a.hp)}, hits for ${Math.round(a.dmg)}`;
 }
 
 export interface UiHooks {
@@ -257,16 +254,27 @@ export class Ui {
 
   hud(me: Me) {
     this.mySnapshotScore = me.sc;
-    const t = TIERS[me.tier];
-    const next = TIERS[me.tier + 1];
-    $("tier").textContent = t.name;
+    const L = Math.floor(me.lv);
+    const rank = rankAt(me.lv);
+    const nextRank = RANKS[rank + 1];
+    const nextGun = GUN_LEVELS.find((g) => g > L);
+    $("tier").textContent = RANKS[rank].name;
+    $("level").textContent = String(L);
     $("score").textContent = me.sc.toLocaleString();
     const set = (id: string, v: number) => $(id).style.setProperty("--v", String(Math.max(0, Math.min(1, v))));
-    if (next) {
-      $("next-label").textContent = `Next: ${next.name} at ${next.score.toLocaleString()}`;
-      set("next-bar", (me.sc - t.score) / (next.score - t.score));
+    if (L < MAX_LEVEL) {
+      // the bar fills toward the next level; every point moves it, and grows the plane with it
+      const need = levelScore(L + 1) - me.sc;
+      // name the next milestone; when it is the very next level, say it once
+      const ms = nextRank && (!nextGun || nextRank.level <= nextGun)
+        ? { name: nextRank.name, level: nextRank.level }
+        : nextGun ? { name: gunName(gunsAt(nextGun)), level: nextGun } : null;
+      $("next-label").textContent = ms && ms.level === L + 1
+        ? `${need} to ${ms.name}, level ${L + 1}`
+        : `${need} to level ${L + 1}${ms ? `. ${ms.name} at ${ms.level}` : ""}`;
+      set("next-bar", me.lv - L);
     } else {
-      $("next-label").textContent = "Top rank. Hold it.";
+      $("next-label").textContent = "Top level. Hold it.";
       set("next-bar", 1);
     }
     const hp = me.hp / me.max;
@@ -340,8 +348,18 @@ export class Ui {
     this.toastTimer = window.setTimeout(() => p.classList.add("out"), kind === "promo" ? 2600 : 1600);
   }
 
-  promoted(tier: number) {
-    this.toast(`Promoted: ${TIERS[tier].name}`, "promo", tierPerks(tier));
+  /** a new level: the HUD badge flashes; a new rank or new guns also get a toast */
+  levelUp(level: number, changed: number) {
+    const badge = $("level");
+    badge.classList.remove("up");
+    void badge.offsetWidth;
+    badge.classList.add("up");
+    if (changed & 1) {
+      const r = RANKS[rankAt(level)];
+      this.toast(`Promoted: ${r.name}`, "promo", (changed & 2 ? `${gunName(gunsAt(level))}. ` : "") + levelPerks(level));
+    } else if (changed & 2) {
+      this.toast(gunName(gunsAt(level)), "promo", levelPerks(level));
+    }
   }
 
   hurt() {
@@ -361,7 +379,7 @@ export class Ui {
     $("d-score").textContent = m.score.toLocaleString();
     $("d-kills").textContent = String(m.kills);
     $("d-time").textContent = `${Math.floor(m.seconds / 60)}:${String(m.seconds % 60).padStart(2, "0")}`;
-    $("d-tier").textContent = TIERS[m.tier].name;
+    $("d-tier").textContent = `${m.level}, ${RANKS[rankAt(m.level)].name}`;
     this.tally($("dead-tally"), m.kills, 24);
     $("touch").hidden = true;
     $("hud").classList.add("down");

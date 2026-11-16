@@ -3,7 +3,7 @@
 // uses, and quietly nudged back whenever the two disagree.
 
 import {
-  BULLET_LIFE, BULLET_SPEED, BOOST_MULT, CRUISE_Z, type Controls, type Flight, PAINTS, TICK_HZ, TIERS,
+  BULLET_LIFE, BULLET_SPEED, BOOST_MULT, CRUISE_Z, type Controls, type Flight, PAINTS, TICK_HZ, statsAt,
   clamp, fly, gunAngles, gunOffsets, newFlight, pickRadius, wrapAngle, wrapDelta, wrapPos,
 } from "../../shared/game";
 import type { BulletRow, Ev, Me, PilotInfo, PlaneRow, ServerMsg } from "../../shared/protocol";
@@ -39,7 +39,7 @@ export class Game {
   salvage = new Map<number, Salvage>();
   queue: Queued[] = [];
   mine: Flight | null = null;
-  myTier = 0;
+  myLevel = 1; // fractional, from the server
   history: { t: number; x: number; y: number }[] = [];
   controls: Controls = { aim: 0, fire: false, boost: false, roll: false };
   rollPending = false;
@@ -222,10 +222,10 @@ export class Game {
       if (m.me.alive && prevScore >= 0 && m.me.sc > prevScore) {
         const gain = m.me.sc - prevScore;
         const last = this.popups[this.popups.length - 1];
-        if (last && now - last.t < 350) { last.n += gain; last.t = now; }
+        if (last && !last.label && now - last.t < 350) { last.n += gain; last.t = now; }
         else this.popups.push({ n: gain, t: now, dx: (Math.random() - 0.5) * 16 });
       }
-      if (m.me.tier !== this.myTier) this.myTier = m.me.tier;
+      this.myLevel = m.me.lv;
       if (!m.me.alive) this.mine = null;
       if (m.me.alive && !prevAlive) this.ui.respawned();
       this.ui.hud(m.me);
@@ -271,7 +271,7 @@ export class Game {
         const vp = this.pilots.get(victim);
         const kp = this.pilots.get(killer);
         const accent = PAINTS[vp?.paint ?? 0];
-        const scale = TIERS[tier].scale;
+        const scale = statsAt(tier).scale;
         if (victim === me) {
           const at = this.mine ?? { x, y };
           this.scene.explode(victim, at.x, at.y, accent, scale);
@@ -286,7 +286,10 @@ export class Game {
         break;
       }
       case "u":
-        if (e[1] === me) this.ui.promoted(e[2]);
+        if (e[1] === me) {
+          this.ui.levelUp(e[2], e[3]);
+          this.popups.push({ n: 0, label: `Level ${e[2]}`, t: performance.now(), dx: 0 });
+        }
         break;
       case "p":
         break;
@@ -344,7 +347,7 @@ export class Game {
     void boost;
   }
   mineFresh = false;
-  popups: { n: number; t: number; dx: number }[] = [];
+  popups: { n: number; label?: string; t: number; dx: number }[] = [];
 
   // ── input
   private bindInput() {
@@ -522,7 +525,7 @@ export class Game {
     this.pushInput();
     const f = this.mine;
     if (f && this.me?.alive) {
-      const tier = TIERS[this.myTier];
+      const tier = statsAt(this.myLevel);
       fly(f, this.controls, tier, dt);
       this.controls.roll = false;
       this.history.push({ t: now, x: f.x, y: f.y });
@@ -571,7 +574,7 @@ export class Game {
     // planes
     const planes: any[] = [];
     if (f && this.me) {
-      const tier = TIERS[this.myTier];
+      const tier = statsAt(this.myLevel);
       planes.push({
         id: this.myId, x: f.x, y: f.y, yaw: f.yaw, yawRate: f.yawRate, roll: f.roll, rollDir: f.rollDir,
         boost: f.boost, scale: tier.scale, turn: tier.turn, accent: PAINTS[this.pilots.get(this.myId)?.paint ?? 0],
@@ -579,11 +582,11 @@ export class Game {
       });
       this.mineFresh = false;
     }
-    const tags: { x: number; y: number; scale: number; hp: number; tier: number; p: PilotInfo | undefined; me: boolean }[] = [];
+    const tags: { x: number; y: number; scale: number; hp: number; lv: number; p: PilotInfo | undefined; me: boolean }[] = [];
     for (const [id, rem] of this.remotes) {
       const s = this.sample(id, rt);
       if (!s) continue;
-      const tier = TIERS[s.tier];
+      const tier = statsAt(s.lv);
       const p = this.pilots.get(id);
       planes.push({
         id, x: s.x, y: s.y, yaw: s.yaw, yawRate: s.yawRate, roll: s.roll, rollDir: s.rollDir, boost: s.boost,
@@ -591,7 +594,7 @@ export class Game {
         firing: (s.flags & 2) !== 0, fresh: rem.fresh,
       });
       rem.fresh = false;
-      tags.push({ x: s.x, y: s.y, scale: tier.scale, hp: s.hp, tier: s.tier, p, me: false });
+      tags.push({ x: s.x, y: s.y, scale: tier.scale, hp: s.hp, lv: s.lv, p, me: false });
     }
     this.scene.setJets(planes);
 
@@ -613,7 +616,7 @@ export class Game {
 
     // salvage, hiding pieces my plane has just flown through until the server agrees
     const sal: any[] = [];
-    const reach = f ? pickRadius(TIERS[this.myTier].scale) : 0;
+    const reach = f ? pickRadius(statsAt(this.myLevel).scale) : 0;
     for (const s of this.salvage.values()) {
       if (f && !s.hiddenAt) {
         const dx = wrapDelta(s.x - f.x);
@@ -664,10 +667,10 @@ export class Game {
     if (a === b || rb[0] !== ra[0]) {
       // past the newest snapshot: carry on along the heading for a moment
       const ahead = clamp((rt - a.tk) / TICK_HZ, 0, 0.25);
-      const sp = TIERS[ra[9]].speed * (1 + (BOOST_MULT - 1) * ra[7]);
+      const sp = statsAt(ra[9]).speed * (1 + (BOOST_MULT - 1) * ra[7]);
       return {
         x: wrapPos(ra[1] + Math.sin(ra[3]) * sp * ahead), y: wrapPos(ra[2] - Math.cos(ra[3]) * sp * ahead),
-        yaw: ra[3], yawRate: ra[4], roll: ra[5], rollDir: ra[6], boost: ra[7], hp: ra[8], tier: ra[9], flags: ra[10],
+        yaw: ra[3], yawRate: ra[4], roll: ra[5], rollDir: ra[6], boost: ra[7], hp: ra[8], lv: ra[9], flags: ra[10],
       };
     }
     const t = clamp((rt - a.tk) / (b.tk - a.tk), 0, 1);
@@ -678,7 +681,7 @@ export class Game {
       x: wrapPos(ra[1] + wrapDelta(rb[1] - ra[1]) * t),
       y: wrapPos(ra[2] + wrapDelta(rb[2] - ra[2]) * t),
       yaw: ra[3] + wrapAngle(rb[3] - ra[3]) * t,
-      yawRate: lerp(ra[4], rb[4]), roll, rollDir: rb[6], boost: lerp(ra[7], rb[7]), hp: rb[8], tier: rb[9], flags: rb[10],
+      yawRate: lerp(ra[4], rb[4]), roll, rollDir: rb[6], boost: lerp(ra[7], rb[7]), hp: rb[8], lv: lerp(ra[9], rb[9]), flags: rb[10],
     };
   }
 
@@ -698,17 +701,18 @@ export class Game {
     for (const p of this.popups) {
       const u = (now - p.t) / 1000;
       const X = fx * k + p.dx * d;
-      const Y = fy * k - (30 + 34 * (1 - (1 - u) * (1 - u))) * d * Math.max(1, TIERS[this.myTier].scale * 1.4);
+      const Y = fy * k - (30 + 34 * (1 - (1 - u) * (1 - u))) * d * Math.max(1, statsAt(this.myLevel).scale * 1.4);
       c.globalAlpha = u < 0.7 ? 1 : (1 - u) / 0.3;
+      const text = p.label ?? `+${p.n}`;
       c.strokeStyle = "rgba(6, 14, 30, 0.85)";
-      c.strokeText(`+${p.n}`, X, Y);
-      c.fillStyle = "#ffd65c";
-      c.fillText(`+${p.n}`, X, Y);
+      c.strokeText(text, X, p.label ? Y - 22 * d : Y);
+      c.fillStyle = p.label ? "#f6f8fc" : "#ffd65c";
+      c.fillText(text, X, p.label ? Y - 22 * d : Y);
     }
     c.globalAlpha = 1;
   }
 
-  private drawLabels(tags: { x: number; y: number; scale: number; hp: number; tier: number; p: PilotInfo | undefined }[], f: Flight | null) {
+  private drawLabels(tags: { x: number; y: number; scale: number; hp: number; lv: number; p: PilotInfo | undefined }[], f: Flight | null) {
     const c = this.lctx;
     const k = this.px * this.dpr;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -732,12 +736,22 @@ export class Game {
       const name = t.p ? t.p.name : "";
       const flag = t.p?.cc ? flagEmoji(t.p.cc) + " " : "";
       const label = `${flag}${name}`;
+      const lvText = String(Math.floor(t.lv));
       const ty = Y - half - 8 * d;
+      // the name, then the level in gold: how big a fight this is, at a glance
+      const nw = c.measureText(label).width;
+      const lw = c.measureText(lvText).width;
+      const gap = 6 * d;
+      const w = nw + gap + lw + 10 * d;
       c.fillStyle = "rgba(6, 14, 30, 0.55)";
-      const w = c.measureText(label).width + 10 * d;
       c.fillRect(X - w / 2, ty - 12 * d, w, 16 * d);
+      c.textAlign = "left";
+      const x0 = X - w / 2 + 5 * d;
       c.fillStyle = "rgba(246, 248, 252, 0.96)";
-      c.fillText(label, X, ty);
+      c.fillText(label, x0, ty);
+      c.fillStyle = "#ffd65c";
+      c.fillText(lvText, x0 + nw + gap, ty);
+      c.textAlign = "center";
       // health, under the plane
       const bw = 30 * d * Math.max(0.8, t.scale);
       const by = Y + half * 0.7 + 4 * d;

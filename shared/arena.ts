@@ -3,8 +3,8 @@
 
 import {
   BULLET_LIFE, BULLET_SPEED, CRUISE_Z, HIT_POINTS, KILL_POINTS, KILL_SHARE, ambientValue, type Controls, type Flight, REGEN_DELAY, REGEN_RATE, SALVAGE_AMBIENT,
-  SALVAGE_MAX, SPAWN_SAFE, TICK_HZ, TIERS, WORLD, clamp, fly, gunAngles, gunOffsets, hitRadius, newFlight,
-  pickRadius, rolling, tierFor, wrapAngle, wrapDelta, wrapPos,
+  SALVAGE_MAX, SPAWN_SAFE, type Stats, TICK_HZ, WORLD, clamp, gunsAt, rankAt, statsAt, levelOf, fly, gunAngles, gunOffsets, hitRadius, newFlight,
+  pickRadius, rolling, wrapAngle, wrapDelta, wrapPos,
 } from "./game";
 import type { BulletRow, Ev, LeaderRow, Me, PilotInfo, PlaneRow, SalvageRow } from "./protocol";
 
@@ -38,7 +38,8 @@ export interface Pilot {
   paint: number;
   bot: boolean;
   flight: Flight | null; // null while shot down
-  tier: number;
+  level: number; // 1..MAX_LEVEL, fractional: it follows the score point by point
+  stats: Stats; // what the plane can do at that level
   hp: number;
   score: number;
   kills: number;
@@ -79,7 +80,7 @@ export interface LifeEnd {
   pilot: Pilot;
   score: number;
   kills: number;
-  tier: number;
+  level: number;
   seconds: number;
   killer: Pilot | null;
 }
@@ -139,7 +140,7 @@ export class Arena {
   join(name: string, cc: string, paint: number, bot = false): Pilot {
     const p: Pilot = {
       id: this.nextId++, name, cc, paint: clamp(paint | 0, 0, 7), bot,
-      flight: null, tier: 0, hp: TIERS[0].hp, score: 0, kills: 0,
+      flight: null, level: 1, stats: statsAt(1), hp: statsAt(1).hp, score: 0, kills: 0,
       controls: { aim: 0, fire: false, boost: false, roll: false }, rollLatch: false,
       gunCd: 0, protect: 0, sinceHit: 99, lastHitBy: -1, firing: 99, spawnedAt: 0, lives: 0,
       brain: bot ? { think: 0, target: -1, aimErr: 0, wander: this.rnd() * Math.PI * 2, fleeing: false, circling: 0, extend: 0, hunter: this.rnd() < 0.7, respawn: 0 } : null,
@@ -192,8 +193,9 @@ export class Arena {
     p.controls.aim = p.flight.yaw;
     p.score = 0;
     p.kills = 0;
-    p.tier = 0;
-    p.hp = TIERS[0].hp;
+    p.level = 1;
+    p.stats = statsAt(1);
+    p.hp = p.stats.hp;
     p.protect = SPAWN_SAFE;
     p.sinceHit = 99;
     p.lastHitBy = -1;
@@ -243,26 +245,30 @@ export class Arena {
   }
 
   private lifeEnd(p: Pilot, killer: Pilot | null): LifeEnd {
-    return { pilot: p, score: p.score, kills: p.kills, tier: p.tier, seconds: this.time - p.spawnedAt, killer };
+    return { pilot: p, score: p.score, kills: p.kills, level: Math.floor(p.level), seconds: this.time - p.spawnedAt, killer };
   }
 
   private gain(p: Pilot, pts: number) {
     // bots grow at half speed, so people stay on top of the board
     p.score += p.bot ? Math.ceil(pts / 2) : pts;
-    const t = tierFor(p.score);
-    if (t > p.tier) {
-      // a promotion keeps the same share of health, in the bigger plane
-      const share = p.hp / TIERS[p.tier].hp;
-      p.tier = t;
-      p.hp = Math.min(TIERS[t].hp, Math.max(share, 0.5) * TIERS[t].hp);
-      this.out.events.push(["u", p.id, t]);
+    const before = p.level;
+    p.level = levelOf(p.score);
+    const grown = statsAt(p.level);
+    // the hull grows with the plane, and the new plating arrives undamaged
+    p.hp = Math.min(grown.hp, p.hp + (grown.hp - p.stats.hp));
+    p.stats = grown;
+    // a whole new level: worth telling the pilot (and the rank or guns, if those changed)
+    if (Math.floor(p.level) > Math.floor(before)) {
+      const L = Math.floor(p.level);
+      const changed = (rankAt(L) > rankAt(before) ? 1 : 0) | (gunsAt(L) > gunsAt(before) ? 2 : 0);
+      this.out.events.push(["u", p.id, L, changed]);
     }
   }
 
   /** shoot down `v`, credited to `k` (or nobody) */
   private down(v: Pilot, k: Pilot | null) {
     const f = v.flight!;
-    this.out.events.push(["k", k ? k.id : -1, v.id, r1(f.x), r1(f.y), v.tier]);
+    this.out.events.push(["k", k ? k.id : -1, v.id, r1(f.x), r1(f.y), r1(v.level)]);
     this.out.lifeEnds.push(this.lifeEnd(v, k));
     this.dropSalvage(f.x, f.y, v.score);
     // a bullet can land after its pilot went down: the kill is named, but a dead pilot scores nothing
@@ -305,7 +311,7 @@ export class Arena {
       if (p.brain) this.think(p);
       const f = p.flight;
       if (!f) continue;
-      const tier = TIERS[p.tier];
+      const tier = p.stats;
       p.controls.roll = p.rollLatch;
       p.rollLatch = false;
       fly(f, p.controls, tier, DT);
@@ -354,7 +360,7 @@ export class Arena {
       for (const p of this.pilots.values()) {
         const f = p.flight;
         if (!f || p.id === b.owner || p.protect > 0 || rolling(f)) continue;
-        const r = hitRadius(TIERS[p.tier].scale);
+        const r = hitRadius(p.stats.scale);
         // closest approach of the segment to the plane's centre
         const cx = wrapDelta(f.x - x0);
         const cy = wrapDelta(f.y - y0);
@@ -384,7 +390,7 @@ export class Arena {
     for (const p of this.pilots.values()) {
       const f = p.flight;
       if (!f) continue;
-      const r = pickRadius(TIERS[p.tier].scale);
+      const r = pickRadius(p.stats.scale);
       for (const s of this.salvage.values()) {
         const dx = wrapDelta(s.x - f.x);
         if (dx > r || dx < -r) continue;
@@ -393,7 +399,7 @@ export class Arena {
         this.salvage.delete(s.id);
         out.salvageRemoved.push(s.id);
         out.events.push(["p", p.id, s.id]);
-        p.hp = Math.min(TIERS[p.tier].hp, p.hp + s.v * 2);
+        p.hp = Math.min(p.stats.hp, p.hp + s.v); // a little repair; growth already adds plating
         this.gain(p, s.v);
       }
     }
@@ -421,7 +427,7 @@ export class Arena {
       return;
     }
     const f = p.flight;
-    const tier = TIERS[p.tier];
+    const tier = p.stats;
     brain.think -= DT;
     if (brain.think > 0) return;
     brain.think = 0.18 + this.rnd() * 0.12;
@@ -439,14 +445,14 @@ export class Arena {
       if (o === p || !o.flight || o.protect > 0 || crowded(o)) continue;
       const d = Math.hypot(wrapDelta(o.flight.x - f.x), wrapDelta(o.flight.y - f.y));
       // a little keener on wounded and smaller planes
-      const keen = d * (0.75 + 0.25 * (o.hp / TIERS[o.tier].hp)) * (o.tier > p.tier + 2 ? 1.4 : 1);
+      const keen = d * (0.75 + 0.25 * (o.hp / o.stats.hp)) * (o.level > p.level + 10 ? 1.4 : 1);
       if (keen < foeD) { foeD = keen; foe = o; }
     }
     const c = p.controls;
     c.fire = false;
     c.boost = false;
     brain.target = foe ? foe.id : -1;
-    brain.fleeing = !!foe && p.hp < tier.hp * 0.3 && foe.tier >= p.tier;
+    brain.fleeing = !!foe && p.hp < tier.hp * 0.3 && foe.level >= p.level;
     if (foe && foe.flight) {
       const of = foe.flight;
       const dx = wrapDelta(of.x - f.x);
@@ -457,7 +463,7 @@ export class Arena {
         c.boost = f.energy > 20;
       } else {
         // lead the target
-        const ospeed = TIERS[foe.tier].speed;
+        const ospeed = foe.stats.speed;
         const t = d / (BULLET_SPEED + tier.speed);
         const lx = dx + Math.sin(of.yaw) * ospeed * t;
         const ly = dy - Math.cos(of.yaw) * ospeed * t;
@@ -477,7 +483,7 @@ export class Arena {
           brain.extend = 1.2 + this.rnd() * 0.8;
         }
         // the closer the target, the wider the cone that still hits it
-        c.fire = d < 300 && off < Math.max(0.2, Math.atan2(hitRadius(TIERS[foe.tier].scale) * 1.6, d));
+        c.fire = d < 300 && off < Math.max(0.2, Math.atan2(hitRadius(foe.stats.scale) * 1.6, d));
         c.boost = d > 260 && f.energy > 55;
       }
       if (p.sinceHit < 0.4 && this.rnd() < 0.25) p.rollLatch = true;
@@ -522,7 +528,7 @@ export class Arena {
       const f = p.flight;
       if (!f) continue;
       const flags = (p.protect > 0 ? 1 : 0) | (p.firing < 0.12 ? 2 : 0);
-      rows.push([p.id, r1(f.x), r1(f.y), r3(f.yaw), r2(f.yawRate), f.roll < 0 ? -1 : r2(f.roll), f.rollDir, r2(f.boost), r2(clamp(p.hp / TIERS[p.tier].hp, 0, 1)), p.tier, flags]);
+      rows.push([p.id, r1(f.x), r1(f.y), r3(f.yaw), r2(f.yawRate), f.roll < 0 ? -1 : r2(f.roll), f.rollDir, r2(f.boost), r2(clamp(p.hp / p.stats.hp, 0, 1)), r1(p.level), flags]);
     }
     return rows;
   }
@@ -532,8 +538,8 @@ export class Arena {
     if (!p) return null;
     const f = p.flight;
     return {
-      alive: !!f, hp: Math.ceil(Math.max(0, p.hp)), max: TIERS[p.tier].hp, en: f ? Math.round(f.energy) : 0,
-      sc: p.score, k: p.kills, cd: f ? r2(f.rollCd) : 0, tier: p.tier, prot: r2(p.protect),
+      alive: !!f, hp: Math.ceil(Math.max(0, p.hp)), max: Math.round(p.stats.hp), en: f ? Math.round(f.energy) : 0,
+      sc: p.score, k: p.kills, cd: f ? r2(f.rollCd) : 0, lv: r2(p.level), prot: r2(p.protect),
     };
   }
 
@@ -541,7 +547,7 @@ export class Arena {
     return [...this.pilots.values()]
       .filter((p) => p.flight)
       .sort((a, b) => b.score - a.score || a.id - b.id)
-      .map((p) => [p.id, p.score, p.kills, p.tier]);
+      .map((p) => [p.id, p.score, p.kills, Math.floor(p.level)]);
   }
 
   allSalvage(): SalvageRow[] {

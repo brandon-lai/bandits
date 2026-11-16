@@ -289,7 +289,27 @@ form { display: grid; gap: var(--s-4); }
 }
 #hud[hidden], #board[hidden], #touch[hidden] { display: none; }
 .tier-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-2); }
-.tier { font: 800 1.7rem/1 var(--face-display); text-transform: uppercase; }
+.rank-line { display: flex; align-items: center; gap: var(--s-2); min-width: 0; }
+.tier { font: 800 1.7rem/1 var(--face-display); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* the level badge: a stencilled number plate, which flashes on each new level */
+.level {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 var(--s-1);
+  border-radius: var(--r-inner);
+  background: var(--salvage);
+  color: var(--primary-ink);
+  font: 700 15px/1 var(--face-figures);
+  font-variant-numeric: tabular-nums;
+  text-shadow: none;
+}
+.level.up { animation: level-up var(--t-fade) var(--ease-out); }
+@keyframes level-up {
+  0% { transform: scale(1.35); background: var(--ink); }
+  100% { transform: scale(1); background: var(--salvage); }
+}
 .score { font: 700 1.25rem/1 var(--face-figures); font-variant-numeric: tabular-nums; color: var(--salvage); }
 .meter { display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: var(--s-2); }
 .meter.next { grid-template-columns: 1fr; gap: var(--s-1); }
@@ -466,6 +486,7 @@ form { display: grid; gap: var(--s-4); }
 @media (pointer: coarse) {
   #hud { width: 190px; padding: var(--s-2); left: max(var(--s-2), env(safe-area-inset-left)); bottom: max(var(--s-2), env(safe-area-inset-bottom)); }
   .tier { font-size: 1.3rem; }
+  .level { min-width: 26px; height: 22px; font-size: 13px; }
   #board { width: 168px; padding: var(--s-2); right: max(var(--s-2), env(safe-area-inset-right)); top: max(var(--s-2), env(safe-area-inset-top)); }
   #board li:nth-child(n + 4):not(.me) { display: none; }
   #feed { left: max(var(--s-2), env(safe-area-inset-left)); top: max(var(--s-2), env(safe-area-inset-top)); max-width: 46vw; }

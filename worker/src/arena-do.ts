@@ -207,12 +207,12 @@ export class ArenaDO implements DurableObject {
       if (c.pilot !== p.id) continue;
       this.send(c, JSON.stringify({
         t: "dead", by: end.killer ? end.killer.id : -1, byName: end.killer ? end.killer.name : "",
-        score: end.score, kills: end.kills, seconds: Math.round(end.seconds), tier: end.tier,
+        score: end.score, kills: end.kills, seconds: Math.round(end.seconds), level: end.level,
       }));
     }
     if (end.score >= 30) {
       this.sql.exec("INSERT INTO best (day, name, cc, score, kills, tier, at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        day(), p.name, p.cc, end.score, end.kills, end.tier, Date.now());
+        day(), p.name, p.cc, end.score, end.kills, end.level, Date.now());
       // keep a few days, and only the rows that could still matter
       this.sql.exec("DELETE FROM best WHERE day < ?", day(Date.now() - 3 * 86400_000));
       this.sql.exec(`DELETE FROM best WHERE day = ?1 AND rowid NOT IN

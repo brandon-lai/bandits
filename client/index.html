@@ -72,10 +72,10 @@
       <!-- in flight -->
       <section id="hud" data-ui hidden aria-label="Your plane">
         <div class="tier-row">
-          <span id="tier" class="tier">Cadet</span>
+          <span class="rank-line"><span id="level" class="level" aria-label="Level">1</span><span id="tier" class="tier">Cadet</span></span>
           <span id="score" class="score">0</span>
         </div>
-        <div class="meter next"><span class="label" id="next-label">Next: Wingman</span><i><b id="next-bar"></b></i></div>
+        <div class="meter next"><span class="label" id="next-label">3 to level 2</span><i><b id="next-bar"></b></i></div>
         <div class="meter hp"><span class="label">Hull</span><i><b id="hp-bar"></b></i><span id="hp-num" class="num">100</span></div>
         <div class="meter en"><span class="label">Burner</span><i><b id="en-bar"></b></i><span id="roll" class="roll">Roll</span></div>
         <div id="tally" class="tally" aria-label="Kills this flight: 0"></div>
@@ -111,7 +111,7 @@
           <div><dt>Score</dt><dd id="d-score">0</dd></div>
           <div><dt>Kills</dt><dd id="d-kills">0</dd></div>
           <div><dt>Aloft</dt><dd id="d-time">0:00</dd></div>
-          <div><dt>Rank</dt><dd id="d-tier">Cadet</dd></div>
+          <div><dt>Level</dt><dd id="d-tier">1, Cadet</dd></div>
         </dl>
         <button type="button" id="again" class="btn primary"><span class="btn-label">Fly again</span><kbd>Enter</kbd></button>
         <button type="button" id="change" class="link">Change name or paint</button>
@@ -123,7 +123,7 @@
     <dialog id="about" aria-labelledby="about-title">
       <form method="dialog">
         <h2 id="about-title" class="wordmark small">About</h2>
-        <p>Bandits is a free-for-all dogfight. Every pilot starts as a <b>Cadet</b>. Every hit scores, a kill scores more, and the gold salvage scattered around the sky (and dropped by every wreck) is worth 1, 2 or 5. Score grows your plane: more hull, more guns, harder hits. It also turns slower, so a small plane can always out-turn a big one.</p>
+        <p>Bandits is a free-for-all dogfight. Every pilot starts as a <b>Cadet</b>. Every hit scores, a kill scores more, and the gold salvage scattered around the sky (and dropped by every wreck) is worth 1, 2 or 5. Every point makes your plane a little bigger, tougher and harder-hitting, across 50 levels, with new ranks along the way and extra guns at levels 8, 18 and 30. Bigger planes also turn slower, so a small plane can always out-turn a big one.</p>
         <p>When the sky is quiet, a few computer pilots keep it busy. They make way as people arrive.</p>
         <h3 class="label">What we keep</h3>
         <p>No accounts. Your call sign and, if you leave it on, your country flag are shown to the other pilots. Scores over 30 go on today’s board with that name and flag, and are deleted after three days. Your IP address is never stored.</p>

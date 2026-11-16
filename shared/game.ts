@@ -10,12 +10,14 @@ export const SNAPSHOT_EVERY = 2; // ticks: 15 snapshots a second
 export const CRUISE_Z = 82; // every plane flies at the same height, above the clouds
 
 /**
- * Tiers: score buys a bigger, tougher, harder-hitting plane that turns slower. A small plane
- * can always out-turn a big one, so the leader is never safe.
+ * Growth, agar.io style: every point makes the plane a little bigger, tougher and harder
+ * hitting, and a little slower to turn, so a small plane can always out-turn a big one.
+ * Score maps to a level (1 to MAX_LEVEL, with a fraction for the way to the next), and the
+ * stats follow the fractional level, so growth never waits for a level-up. Guns are the
+ * one thing that comes in steps.
  */
-export interface Tier {
-  name: string;
-  score: number; // score needed to reach this tier
+export interface Stats {
+  level: number; // 1..MAX_LEVEL, fractional
   scale: number; // size of the sprite stack
   hp: number;
   dmg: number; // per bullet
@@ -25,21 +27,55 @@ export interface Tier {
   turn: number; // max turn rate, radians per second
 }
 
-export const TIERS: Tier[] = [
-  { name: "Cadet", score: 0, scale: 0.55, hp: 100, dmg: 10, guns: 1, fire: 0.16, speed: 104, turn: 2.3 },
-  { name: "Wingman", score: 30, scale: 0.62, hp: 120, dmg: 11, guns: 1, fire: 0.14, speed: 106, turn: 2.15 },
-  { name: "Flight Lead", score: 90, scale: 0.7, hp: 150, dmg: 12, guns: 2, fire: 0.15, speed: 107, turn: 2.0 },
-  { name: "Ace", score: 180, scale: 0.78, hp: 185, dmg: 13, guns: 2, fire: 0.13, speed: 108, turn: 1.85 },
-  { name: "Double Ace", score: 360, scale: 0.86, hp: 225, dmg: 14, guns: 3, fire: 0.14, speed: 108, turn: 1.7 },
-  { name: "Squadron Leader", score: 620, scale: 0.95, hp: 270, dmg: 15, guns: 3, fire: 0.12, speed: 107, turn: 1.56 },
-  { name: "Wing Commander", score: 1000, scale: 1.05, hp: 320, dmg: 16, guns: 4, fire: 0.12, speed: 106, turn: 1.43 },
-  { name: "Air Marshal", score: 1600, scale: 1.15, hp: 380, dmg: 18, guns: 4, fire: 0.11, speed: 104, turn: 1.3 },
-];
+export const MAX_LEVEL = 50;
+/** score needed to reach level L: quick at first (level 2 at 2 points), steeper later */
+export function levelScore(L: number) {
+  return L <= 1 ? 0 : Math.round(2 * Math.pow(L - 1, 1.952)); // level 5 at 30, 20 at ~630, 50 at ~4,000
+}
+const LEVEL_SCORES = Array.from({ length: MAX_LEVEL + 1 }, (_, i) => levelScore(i));
 
-export function tierFor(score: number): number {
-  let t = 0;
-  for (let i = 0; i < TIERS.length; i++) if (score >= TIERS[i].score) t = i;
-  return t;
+/** the level a score buys, with the fraction of the way to the next */
+export function levelOf(score: number): number {
+  let L = 1;
+  while (L < MAX_LEVEL && score >= LEVEL_SCORES[L + 1]) L++;
+  if (L >= MAX_LEVEL) return MAX_LEVEL;
+  return L + (score - LEVEL_SCORES[L]) / (LEVEL_SCORES[L + 1] - LEVEL_SCORES[L]);
+}
+
+/** the guns arrive at these levels */
+export const GUN_LEVELS = [1, 8, 18, 30];
+export const gunsAt = (level: number) => GUN_LEVELS.filter((l) => level >= l).length;
+
+export function statsAt(level: number): Stats {
+  const g = clamp(level, 1, MAX_LEVEL) - 1; // 0..49
+  return {
+    level: g + 1,
+    scale: 0.55 + 0.013 * g, // 0.55 .. 1.19
+    hp: 100 + 6 * g, // 100 .. 394
+    dmg: 10 + 0.18 * g, // 10 .. 18.8
+    guns: gunsAt(g + 1),
+    fire: 0.16 - 0.001 * g, // 0.16 .. 0.11 s
+    speed: 104 + 0.06 * g,
+    turn: 2.3 - 0.021 * g, // 2.3 .. 1.27 rad/s
+  };
+}
+export const statsFor = (score: number) => statsAt(levelOf(score));
+
+/** ranks: titles earned at set levels */
+export const RANKS = [
+  { name: "Cadet", level: 1 },
+  { name: "Wingman", level: 5 },
+  { name: "Flight Lead", level: 10 },
+  { name: "Ace", level: 15 },
+  { name: "Double Ace", level: 20 },
+  { name: "Squadron Leader", level: 28 },
+  { name: "Wing Commander", level: 36 },
+  { name: "Air Marshal", level: 45 },
+];
+export function rankAt(level: number) {
+  let r = 0;
+  for (let i = 0; i < RANKS.length; i++) if (level >= RANKS[i].level) r = i;
+  return r;
 }
 
 export const BOOST_MULT = 1.75; // speed while the afterburner is open
@@ -111,7 +147,7 @@ export function newFlight(x: number, y: number, yaw: number): Flight {
 }
 
 /** one step of flying. Pure: the client runs the same code to predict its own plane. */
-export function fly(f: Flight, c: Controls, tier: Tier, dt: number) {
+export function fly(f: Flight, c: Controls, tier: Stats, dt: number) {
   // turning: toward the aim, no faster than the plane allows
   const err = wrapAngle(c.aim - f.yaw);
   const want = clamp(err * 3.2, -tier.turn, tier.turn);
