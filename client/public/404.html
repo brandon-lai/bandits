@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="dark" />
 <title>Bandits: off the map</title>
-<meta name="description" content="This page is not part of the Bandits arena." />
+<meta name="description" content="This page is off the Bandits map." />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <style>
   /* Hallmark · pre-emit critique: P3 H5 E5 S4 R5 V3 · weakest: P, a not-found page has little to argue; it stays in the arena's voice and points straight back */
+  @font-face { font-family: "B612"; src: url(/fonts/b612-latin-400-normal.woff2) format("woff2"); font-display: swap; }
+  @font-face { font-family: "Big Shoulders Stencil"; font-weight: 800; src: url(/fonts/big-shoulders-stencil-latin-800-normal.woff2) format("woff2"); font-display: swap; }
   :root {
     color-scheme: dark;
     --sea: oklch(51% 0.13 255);
@@ -19,16 +21,17 @@
     --primary-ink: oklch(17% 0.04 262);
     --focus: oklch(82% 0.17 55);
     --face: "B612", system-ui, sans-serif;
-    --edge: oklch(95% 0.012 255 / 0.13);
+    --face-display: "Big Shoulders Stencil", "Arial Narrow", Impact, sans-serif;
+    --float: 0 20px 50px oklch(10% 0.03 262 / 0.38), 0 5px 14px oklch(10% 0.03 262 / 0.26);
     --primary-press: oklch(61% 0.19 40);
   }
   html, body { margin: 0; height: 100%; overflow-x: clip; }
   body {
     display: grid; place-items: center; padding: 16px; box-sizing: border-box;
-    background: var(--sea); color: var(--ink); font: 400 16px/1.5 var(--face);
+    background: var(--sea) url(/sea.jpg) center / cover; image-rendering: pixelated; color: var(--ink); font: 400 16px/1.5 var(--face);
   }
-  main { max-width: 380px; padding: 24px; background: var(--panel); border-radius: 3px; border: 1px solid var(--edge); }
-  h1 { margin: 0 0 8px; font: 700 28px/1.1 var(--face); text-wrap: balance; }
+  main { max-width: 380px; padding: 24px; background: var(--panel); border-radius: 3px; box-shadow: var(--float); image-rendering: auto; }
+  h1 { margin: 0 0 8px; font: 800 2.6rem/0.95 var(--face-display); text-transform: uppercase; text-wrap: balance; }
   p { margin: 0 0 20px; color: var(--ink-2); }
   a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 20px; border-radius: 3px; background: var(--primary); color: var(--primary-ink); font-weight: 700; text-decoration: none; }
   a:active { background: var(--primary-press); transform: translateY(1px); }
@@ -38,7 +41,7 @@
 <body>
 <main>
   <h1>Off the map</h1>
-  <p>There is nothing out here but open sea. The fight is back at the arena.</p>
+  <p>Nothing out here but islands and clouds. The fight is back at the arena.</p>
   <a href="/">Back to the arena</a>
 </main>
 </body>

@@ -287,9 +287,11 @@ export class Ui {
     this.lastHp = hp;
   }
 
+  /** kill marks: five stencilled slots to start with, filled in as kills land */
   private tally(box: HTMLElement, kills: number, max: number) {
     box.replaceChildren();
-    for (let i = 0; i < Math.min(kills, max); i++) box.append(el("i"));
+    const slots = Math.max(5, Math.min(kills, max));
+    for (let i = 0; i < slots; i++) box.append(el("i", i < kills ? "on" : ""));
     if (kills > max) box.append(el("span", "more", `+${kills - max}`));
   }
 
@@ -303,7 +305,10 @@ export class Ui {
       const who = el("span", "who");
       const p = r?.p;
       who.append(el("span", "nm", `${p?.cc ? flagEmoji(p.cc) + " " : ""}${p ? p.name : "You"}`));
-      if (p?.bot) who.append(el("span", "bot-tag", "bot"));
+      if (p?.bot) {
+        li.classList.add("bot");
+        who.append(el("span", "bot-tag", "bot"));
+      }
       li.append(el("span", "n", String(i)), who, el("span", "pts", (r ? r.score : (meScore ?? 0)).toLocaleString()));
       list.append(li);
     };
@@ -313,7 +318,7 @@ export class Ui {
       const me = this.mySnapshotScore;
       add(null, rank, me);
     }
-    $("board-title").textContent = `Leaderboard, ${n} flying`;
+    $("board-title").textContent = `${n} flying`;
   }
   mySnapshotScore = 0;
 
@@ -321,7 +326,8 @@ export class Ui {
     const list = $("feed");
     const li = el("li");
     if (iKilled || iDied) li.classList.add("mine");
-    if (killer) li.append(el("b", "", iKilled ? "You" : killer), " shot down ", el("b", "", iDied ? "you" : victim));
+    if (killer && iDied) li.append(el("b", "", killer), " shot you down");
+    else if (killer) li.append(el("b", "", iKilled ? "You" : killer), " shot down ", el("b", "", victim));
     else li.append(el("b", "", iDied ? "You" : victim), " went down");
     list.prepend(li);
     while (list.children.length > 5) list.lastElementChild!.remove();
