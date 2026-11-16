@@ -132,7 +132,8 @@ export class Arena {
   }
 
   info(p: Pilot): PilotInfo {
-    return { id: p.id, name: p.name, cc: p.cc, paint: p.paint, bot: p.bot };
+    // whether a pilot is a bot stays on the server: the page shows bots and people alike
+    return { id: p.id, name: p.name, cc: p.cc, paint: p.paint };
   }
 
   join(name: string, cc: string, paint: number, bot = false): Pilot {

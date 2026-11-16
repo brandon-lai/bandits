@@ -701,7 +701,7 @@ export class Game {
       c.fillStyle = "rgba(6, 14, 30, 0.55)";
       const w = c.measureText(label).width + 10 * d;
       c.fillRect(X - w / 2, ty - 12 * d, w, 16 * d);
-      c.fillStyle = t.p?.bot ? "rgba(226, 232, 242, 0.78)" : "rgba(246, 248, 252, 0.96)";
+      c.fillStyle = "rgba(246, 248, 252, 0.96)";
       c.fillText(label, X, ty);
       // health, under the plane
       const bw = 30 * d * Math.max(0.8, t.scale);

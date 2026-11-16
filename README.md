@@ -61,8 +61,8 @@ code and nudged toward the server's version, so steering has no lag. Everyone el
 - **Barrel roll:** bullets pass through you for most of a 0.7 s roll, with a 3.2 s cooldown.
 - **Spawn protection:** 3 s, ends early if you fire. Hull repairs itself after 5 s untouched.
 - **Death:** you respawn as a Cadet with 0 points, as in agar.io.
-- **Bots:** with 1 person on there are 6 bots, tapering to none at 9 people. They are
-  marked `bot` everywhere, score at half rate so people stay on top, hunt across the map,
+- **Bots:** with 1 person on there are 6 bots, tapering to none at 9 people. They look like
+  any other pilot (the page is never told which planes are bots), score at half rate so people stay on top, hunt across the map,
   lead their shots, flee when hurt and break out of turning circles.
 
 ## Open questions, and the answers shipped

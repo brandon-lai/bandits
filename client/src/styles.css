@@ -349,23 +349,11 @@ form { display: grid; gap: var(--s-4); }
 }
 #board li.me { box-shadow: inset 2px 0 0 var(--primary); }
 #board li.me .nm, #board li.me .pts { color: var(--primary-hover); }
-#board li.bot .nm { color: var(--ink-2); }
 #board li.gap { display: block; height: 1px; padding: 0; margin: var(--s-1) 0; background: var(--rule); }
 #board .n { color: var(--ink-3); font: 400 12px/1 var(--face-figures); }
 #board .who { display: flex; align-items: center; min-width: 0; }
 #board .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-#board .bot-tag { flex: none; }
 #board .pts { font: 700 13px/1 var(--face-figures); font-variant-numeric: tabular-nums; }
-.bot-tag {
-  display: inline-block;
-  margin-left: 4px;
-  padding: 0 2px;
-  font: 400 10px/14px var(--face-figures);
-  color: var(--ink-3);
-  border-radius: var(--r-inner);
-  background: var(--panel-well);
-  vertical-align: 1px;
-}
 
 /* ── kill feed and toasts */
 #feed {
@@ -487,7 +475,6 @@ form { display: grid; gap: var(--s-4); }
   #board { width: 150px; }
   #board li:nth-child(n + 4):not(.me) { display: none; }
   #board li.gap { display: none; }
-  #board .bot-tag { display: none; }
 }
 
 /* ── connection banner */

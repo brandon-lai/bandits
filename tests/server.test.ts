@@ -82,8 +82,11 @@ describe("the arena server", () => {
     expect(lobby.cc).toBe("CA");
     const w = await c.join("Tester");
     const me = w.pilots.find((p: any) => p.id === w.id);
-    expect(me).toMatchObject({ name: "Tester", cc: "CA", paint: 2, bot: false });
-    expect(w.pilots.filter((p: any) => p.bot)).toHaveLength(6);
+    expect(me).toEqual({ id: w.id, name: "Tester", cc: "CA", paint: 2 });
+    // six bots, and nothing on the wire says which ones they are
+    expect(w.pilots).toHaveLength(7);
+    for (const p of w.pilots) expect(Object.keys(p).sort()).toEqual(["cc", "id", "name", "paint"]);
+    expect((await (await fetch(`${B}/health`)).json()).bots).toBe(6);
     expect(w.salvage.length).toBeGreaterThan(100);
     const s = await c.waitFor((m) => m.t === "s" && m.me);
     expect(s.me.alive).toBe(true);

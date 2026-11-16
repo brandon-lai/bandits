@@ -305,10 +305,6 @@ export class Ui {
       const who = el("span", "who");
       const p = r?.p;
       who.append(el("span", "nm", `${p?.cc ? flagEmoji(p.cc) + " " : ""}${p ? p.name : "You"}`));
-      if (p?.bot) {
-        li.classList.add("bot");
-        who.append(el("span", "bot-tag", "bot"));
-      }
       li.append(el("span", "n", String(i)), who, el("span", "pts", (r ? r.score : (meScore ?? 0)).toLocaleString()));
       list.append(li);
     };

@@ -5,7 +5,6 @@ export interface PilotInfo {
   name: string;
   cc: string; // ISO country code, "" when hidden or unknown
   paint: number;
-  bot: boolean;
 }
 
 /** id, x, y, yaw, yawRate, roll (-1 or 0..1), rollDir, boost 0..1, hp 0..1, tier, flags (1 protected · 2 firing) */
